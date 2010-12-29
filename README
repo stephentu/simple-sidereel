@@ -1,0 +1,3 @@
+This is a very primitive program which is designed to allow you to get a list of all URLs for a particular episode of a show on Sidereel, without having to actually go to their website. It simply scrapes HTML from their site, so it is quite susceptible to breakage when their layout changes.
+
+JSoup is the only dependency.
