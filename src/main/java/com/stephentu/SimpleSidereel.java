@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -21,6 +22,8 @@ import com.stephentu.util.Function1;
 import com.stephentu.util.Tuple2;
 
 public class SimpleSidereel {
+  
+  private static final int TIMEOUT = 5000;
 
   static class LinkTask implements Runnable {
     private final List<String> linksToFollow;
@@ -36,9 +39,9 @@ public class SimpleSidereel {
       for (String link : linksToFollow) {
         Document innerDoc; 
         if (link.startsWith("/"))
-          innerDoc = Jsoup.connect("http://www.sidereel.com" + link).get();
+          innerDoc = connectionWithTimeout("http://www.sidereel.com" + link, TIMEOUT).get();
         else if (link.startsWith("http"))
-          innerDoc = Jsoup.connect(link).get();
+          innerDoc = connectionWithTimeout(link, TIMEOUT).get();
         else {
           System.err.println("cannot handle link: " + link); 
           continue;
@@ -79,6 +82,12 @@ public class SimpleSidereel {
       cpy.add(orig.get(idx));
     return cpy;
   }
+
+  private static Connection connectionWithTimeout(String url, int timeout) {
+    Connection c = Jsoup.connect(url);
+    c.request().timeout(timeout);
+    return c;
+  }
   
   private static void episodeURLDump(String showName, int season, int episode, boolean forceNoParallel) throws IOException, InterruptedException {
     System.out.println("----------------------------------");
@@ -87,7 +96,7 @@ public class SimpleSidereel {
     System.out.println("Episode: " + episode);
     System.out.println("----------------------------------");
     
-    Document doc = Jsoup.connect(String.format("http://www.sidereel.com/%s/season-%d/episode-%d/search", showName, season, episode)).get();
+    Document doc = connectionWithTimeout(String.format("http://www.sidereel.com/%s/season-%d/episode-%d/search", showName, season, episode), TIMEOUT).get();
     
     List<Document> docsToCheck = new ArrayList<Document>();
     docsToCheck.add(doc);
@@ -101,7 +110,7 @@ public class SimpleSidereel {
           maxSoFar = Math.max(maxSoFar, Integer.parseInt(pgNElem.text()));
         }
         for (int i = 2; i <= maxSoFar; i++) {
-          docsToCheck.add(Jsoup.connect(String.format("http://www.sidereel.com/%s/season-%d/episode-%d/search?page=%d", showName, season, episode, i)).get());
+          docsToCheck.add(connectionWithTimeout(String.format("http://www.sidereel.com/%s/season-%d/episode-%d/search?page=%d", showName, season, episode, i), TIMEOUT).get());
         }
       }
     }
@@ -142,7 +151,7 @@ public class SimpleSidereel {
   
   private static SortedMap<Integer, SortedMap<Integer, Tuple2<Element, String>>> retrieveEpisodeSummaries(String showName, Function1<Integer, Boolean> seasonInclusionCriteria) throws IOException {
     
-    Document doc = Jsoup.connect(String.format("http://www.sidereel.com/%s", showName)).get();
+    Document doc = connectionWithTimeout(String.format("http://www.sidereel.com/%s", showName), TIMEOUT).get();
 
     Elements seasons = doc.select("div[class^=season-header] a[class^=expand-season-trigger]");
     
@@ -162,7 +171,7 @@ public class SimpleSidereel {
     // TODO: parallelize
     for (Map.Entry<Integer, Element> entry : seasonMap.entrySet()) {
       String seasonFragmentUrl = "http://www.sidereel.com" + entry.getValue().attr("data-load-from");
-      Document seasonDoc = Jsoup.connect(seasonFragmentUrl).get();
+      Document seasonDoc = connectionWithTimeout(seasonFragmentUrl, TIMEOUT).get();
       Elements episodes = seasonDoc.select("div[class^=episode-header] a[class^=expand-episode-trigger]");
       SortedMap<Integer, Tuple2<Element, String>> episodeMap = new TreeMap<Integer, Tuple2<Element, String>>();
       for (Element e : episodes) {
@@ -171,7 +180,7 @@ public class SimpleSidereel {
           throw new RuntimeException("Found invalid URL from episode element: " + e.attr("href"));
         int episodeNumber = Integer.parseInt(m.group(1));
         String episodeFragmentUrl = "http://www.sidereel.com" + e.attr("data-load-from");
-        Document episodeDoc = Jsoup.connect(episodeFragmentUrl).get();
+        Document episodeDoc = connectionWithTimeout(episodeFragmentUrl, TIMEOUT).get();
         Elements summaries = episodeDoc.select("div[class^=episode-summary]");
         episodeMap.put(episodeNumber, new Tuple2<Element, String>(e, summaries.first().text()));
       }
