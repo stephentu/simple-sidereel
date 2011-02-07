@@ -1,0 +1,3 @@
+#!/bin/sh
+BASE=`dirname $0`
+java -classpath $BASE/simple-sidereel.jar com.stephentu.SimpleSidereel $@

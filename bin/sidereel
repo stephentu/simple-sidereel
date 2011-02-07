@@ -1,3 +1,0 @@
-#!/bin/sh
-BASE=`dirname $0`/..
-java -classpath $BASE/lib/jsoup-1.4.1.jar:$BASE/target/classes com.stephentu.SimpleSidereel $@
