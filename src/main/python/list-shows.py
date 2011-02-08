@@ -7,7 +7,7 @@ import urllib
 from BeautifulSoup import BeautifulSoup
 
 _CACHE_FILE='.sidereel-show-list'
-_CACHE_AGE=7*24*60 # 1 week (7 days) in seconds
+_CACHE_AGE=7*24*60*60 # 1 week (7 days) in seconds
 
 def user_home():
   # hack?
